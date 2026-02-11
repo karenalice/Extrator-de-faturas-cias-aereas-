@@ -78,4 +78,4 @@ Para evitar um código monolítico, o JavaScript foi dividido:
 
 ---
 
-**Autor**: Departamento de BI | **Versão**: 2.0 (Pyodide/Client-Side)
+**Autor**: Departamento de BI - Confiança Turismo | **Versão**: 2.0 (Pyodide/Client-Side)
