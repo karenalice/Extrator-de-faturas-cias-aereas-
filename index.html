@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PAINEL DE EXTRAÇÃO DE FATURA - BI</title>
+    <link rel="stylesheet" href="static/css/style.css">
+</head>
+
+<body>
+    <header>
+        <div class="header-left">
+            <div class="logo">
+                <img src="static/img/logo.png" alt="Logo">
+            </div>
+            <div class="title">
+                <h1>Extrator de Faturas CIAs Aéreas</h1>
+            </div>
+        </div>
+        <nav class="nav-menu">
+            <a href="index.html" class="active">Início</a>
+            <a href="AD.html">Azul</a>
+            <a href="G3.html">Gol</a>
+            <a href="JJ.html">Latam</a>
+        </nav>
+    </header>
+
+    <main>
+        <div class="intro-text">
+            <h2>PAINEL DE EXTRAÇÃO DE FATURA</h2>
+            <p>Selecione a companhia aérea para iniciar o processamento.</p>
+        </div>
+
+        <div class="cards-container">
+            <div class="card" onclick="location.href='AD.html'">
+                <img src="logo azul.png" alt="Azul">
+                <h3>Azul (AD)</h3>
+                <p>Extração de PDFs da Azul Linhas Aéreas.</p>
+            </div>
+
+            <div class="card" onclick="location.href='G3.html'">
+                <img src="logo gol.png" alt="Gol">
+                <h3>Gol (G3)</h3>
+                <p>Extração de arquivos .TXT da Gol.</p>
+            </div>
+
+            <div class="card" onclick="location.href='JJ.html'">
+                <img src="logo latam.png" alt="Latam">
+                <h3>Latam (JJ)</h3>
+                <p>Extração de PDFs (1041) da Latam Airlines.</p>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        &copy; 2024 Departamento de BI - Todos os direitos reservados.
+    </footer>
+</body>
+
+</html>

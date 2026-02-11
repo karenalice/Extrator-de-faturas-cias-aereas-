@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PAINEL DE EXTRAÇÃO DE FATURA - AZUL (AD)</title>
+    <link rel="stylesheet" href="static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+</head>
+
+<body data-airline="AD">
+    <header>
+        <div class="header-left">
+            <div class="logo">
+                <img src="static/img/logo.png" alt="Logo" onclick="location.href='index.html'" style="cursor:pointer">
+            </div>
+            <div class="title">
+                <h1>Painel de Extração - Azul (AD)</h1>
+            </div>
+        </div>
+        <nav class="nav-menu">
+            <a href="index.html">Início</a>
+            <a href="AD.html" class="active">Azul</a>
+            <a href="G3.html">Gol</a>
+            <a href="JJ.html">Latam</a>
+        </nav>
+    </header>
+
+    <main>
+        <section class="upload-section">
+            <h2>Processar Faturas AZUL</h2>
+            <p>Selecione a fatura em formato PDF para extração.</p>
+
+            <div class="file-input-wrapper">
+                <input type="file" id="file-upload" multiple accept=".pdf">
+                <div id="file-name-display">Clique ou arraste o PDF aqui</div>
+            </div>
+
+            <div style="text-align: center; margin-top: 1rem;">
+                <button id="btn-processar" class="btn" disabled>Carregando Python...</button>
+                <button id="btn-exportar" class="btn btn-yellow" style="display: none;">Exportar Excel</button>
+            </div>
+        </section>
+
+        <section id="results-section">
+            <div id="data-table-container">
+                <!-- Tabela será renderizada via JS -->
+            </div>
+        </section>
+    </main>
+
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <p id="loading-text" style="margin-top: 1rem; font-weight: bold;">Inicializando extrator, aguarde...</p>
+    </div>
+
+    <footer>
+        &copy; 2024 Departamento de BI - Todos os direitos reservados.
+    </footer>
+
+    <!-- Carrega scripts modularizados -->
+    <script src="static/js/shared.js"></script>
+    <script src="static/js/AD.js"></script>
+</body>
+
+</html>
