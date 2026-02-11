@@ -2,7 +2,6 @@
 
 Bem-vindo ao **Extrator de Faturas Aéreas**, uma aplicação web moderna e eficiente para processamento automatizado de faturas de companhias aéreas. Este projeto utiliza **Python no navegador (via Pyodide)** para garantir privacidade total dos dados e alta performance.
 
-![Interface Principal](static/img/logo.png)
 
 ## ✨ Funcionalidades
 
@@ -82,3 +81,4 @@ O sistema suporta a extração de dados das três principais companhias aéreas 
 ---
 
 Desenvolvido para otimizar a conferência de faturas aéreas. ✈️📊
+
