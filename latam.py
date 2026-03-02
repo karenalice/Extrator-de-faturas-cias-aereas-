@@ -37,20 +37,30 @@ def extract_latam_data(arquivo_pdf):
         except:
             return "0"
 
-    # --- Configurações (Mantidas do original) ---
-    mapeamento_colunas = {
-        "Vl.Item Fat.": "Vl.Item Fatura",
-        "Vl.Incent.": "Vl.Incentivo",
-        "Vl.Incentivo.": "Vl.Incentivo",
-        "Vl.Comis.": "Vl.Comissão",
-        "Vl.Comis": "Vl.Comissão",
-    }
-
+    # --- Configurações ---
     colunas_padrao = [
         "Data", "Documento", "Vl. Tarifa", "Vl.Tx.Emb.", "Vl.Multa",
         "Vl.Rep. Terc.", "Tx.Adm", "Vl.Comissão", "Vl.Incentivo",
         "Vl.Desc", "Vl.Item Fatura", "OBS", "Bilhete"
     ]
+
+    # Mapeamento de termos encontrados no PDF para nossas colunas internas
+    mapeamento_termos = {
+        "Vl. Tarifa": "Vl. Tarifa",
+        "Vl.Tx.Emb.": "Vl.Tx.Emb.",
+        "Vl.Multa": "Vl.Multa",
+        "Vl.Rep. Terc.": "Vl.Rep. Terc.",
+        "Tx.Adm": "Tx.Adm",
+        "Vl.Comis.": "Vl.Comissão",
+        "Vl.Comis": "Vl.Comissão",
+        "Vl.Comissão": "Vl.Comissão",
+        "Vl.Incent.": "Vl.Incentivo",
+        "Vl.Incentivo.": "Vl.Incentivo",
+        "Vl.Incentivo": "Vl.Incentivo",
+        "Vl.Desc": "Vl.Desc",
+        "Vl.Item Fatura": "Vl.Item Fatura",
+        "Vl.Item Fat.": "Vl.Item Fatura",
+    }
 
     colunas_numericas = colunas_padrao[2:11]
 
@@ -64,17 +74,15 @@ def extract_latam_data(arquivo_pdf):
     # --- Lógica de Extração com pypdf ---
     dados = []
     obs_atual = ""
+    current_mapping = [] # Lista das colunas numéricas detectadas na página atual
     
-    # Se arquivo_pdf for booleano ou inválido (ex: problema na conversão JS), evita erro
     if not arquivo_pdf:
         return pd.DataFrame(columns=colunas_padrao)
 
     reader = PdfReader(arquivo_pdf)
     total_pages = len(reader.pages)
-    print(f"DEBUG: Iniciando processamento de {total_pages} páginas (Latam)...")
-
+    
     for page_num, page in enumerate(reader.pages):
-        # Tenta modo layout para manter colunas na mesma linha
         try:
             text = page.extract_text(extraction_mode="layout")
         except:
@@ -85,105 +93,102 @@ def extract_latam_data(arquivo_pdf):
             
         lines = text.split('\n')
         
-        # DEBUG: Mostra o texto da primeira página para entender o formato com layout
-        if page_num == 0:
-            print(f"DEBUG: Amostra texto página 1 (Latam - Modo Layout):")
-            print(text[:1000])
-            print("-" * 40)
-            print("DEBUG: Primeiras 10 linhas:")
-            for i, L in enumerate(lines[:10]):
-                print(f"[{i}] {L}")
-            print("-" * 40)
-
         for line in lines:
             line = line.strip()
             if not line:
                 continue
 
-            # DEBUG: Se encontrar algo parecido com uma data, imprime a linha
-            if re.search(r"\d{2}/\d{2}/\d{4}", line):
-                print(f"DEBUG: Linha com data encontrada: '{line}'")
+            # 1. Detecção de Cabeçalho (Muda o mapeamento para as próximas linhas)
+            # Ex típico: Data Documento Vl. Tarifa Vl.Tx.Emb. ...
+            if "DATA" in line.upper() and ("DOCUMENTO" in line.upper() or "BILHETE" in line.upper()):
+                current_mapping = []
+                positions_found = [] # Para evitar pegar o mesmo lugar duas vezes
                 
-            # Filtro de linhas inválidas
+                # Ordenamos os termos do maior para o menor para evitar que "Vl.Comis" pegue o lugar de "Vl.Comissão"
+                termos_ordenados = sorted(mapeamento_termos.keys(), key=len, reverse=True)
+                
+                for termo in termos_ordenados:
+                    start_pos = 0
+                    while True:
+                        pos = line.upper().find(termo.upper(), start_pos)
+                        if pos == -1:
+                            break
+                        
+                        # Verifica se essa posição já foi "ocupada" por um termo mais longo
+                        overlap = False
+                        for pf_start, pf_end in positions_found:
+                            if not (pos + len(termo) <= pf_start or pos >= pf_end):
+                                overlap = True
+                                break
+                        
+                        if not overlap:
+                            current_mapping.append((pos, mapeamento_termos[termo]))
+                            positions_found.append((pos, pos + len(termo)))
+                        
+                        start_pos = pos + 1
+                
+                # Ordena as colunas pela posição horizontal na linha
+                current_mapping.sort()
+                current_mapping = [item[1] for item in current_mapping]
+                continue
+
+            # 2. Filtro de linhas inválidas
             if any(padrao.upper() in line.upper() for padrao in linhas_invalidas):
                 continue
 
-            # Captura de OBS (Tipo Item)
-            # Ex: "Tipo Item: A VISTA"
+            # 3. Captura de OBS (Tipo Item)
             if "Tipo Item:" in line:
                 match_obs = re.search(r"Tipo Item:\s*(.+)", line, re.IGNORECASE)
                 if match_obs:
                     obs_atual = match_obs.group(1).strip()
                 continue
 
-            # Captura de Linha de Dados
-            # Padrão esperado: DD/MM/YYYY + espaço + Documento + espaço + Valores...
-            # Regex busca data no início da linha
+            # 4. Captura de Linha de Dados (Inicia com Data)
             match_data = re.match(r"^(\d{2}/\d{2}/\d{4})\s+(.+)", line)
-            
             if match_data:
                 data = match_data.group(1)
                 resto = match_data.group(2)
                 
-                # Tenta extrair o Documento
-                # Documentos Latam geralmente têm hífens (957-...) ou são apenas números
-                # O regex abaixo pega a primeira "palavra" que parece um documento
+                # Tenta extrair o Documento (primeira palavra após a data)
                 match_doc = re.match(r"^([^\s]+)\s+(.+)", resto)
-                
                 if match_doc:
                     documento = match_doc.group(1)
                     valores_str = match_doc.group(2)
                     
-                    # Extração de valores numéricos
-                    # A lógica aqui deve ser robusta para diferentes formatos numéricos
-                    # Procura por sequências que parecem números (com ponto ou vírgula)
-                    # Ex: 100.00, 1,234.56, -50.00
-                    # Note que o formatar_valor original espera formato americano (ponto para decimal) após limpar vírgulas
-                    
-                    # Regex para encontrar números float (positivos/negativos) na string
-                    # Assume separação por espaços
+                    # Extração de todos os números na linha
                     partes = valores_str.split()
-                    
-                    # Filtra apenas o que parece número
                     valores_encontrados = []
                     for p in partes:
-                        # Remove caracteres de moeda se houver (ex: R$, BRL)
-                        p_limpo = p.replace('R$', '').replace('BRL', '')
-                        # Verifica se parece número
+                        p_limpo = p.replace('R$', '').replace('BRL', '').replace(' ', '')
                         if re.match(r'^-?[\d,.]+$', p_limpo):
                              valores_encontrados.append(p_limpo)
 
-                    # Cria o registro
-                    linha_padronizada = {col: "" for col in colunas_padrao}
-                    linha_padronizada["Data"] = data
-                    linha_padronizada["Documento"] = documento
-                    linha_padronizada["OBS"] = obs_atual
-                    linha_padronizada["Bilhete"] = gerar_bilhete(documento)
+                    # Cria o registro base com zeros
+                    registro = {col: "0" for col in colunas_padrao}
+                    registro["Data"] = data
+                    registro["Documento"] = documento
+                    registro["OBS"] = obs_atual
+                    registro["Bilhete"] = gerar_bilhete(documento)
 
-                    # Preenche colunas numéricas sequencialmente
-                    # O original confia na ordem das colunas da tabela
-                    # Aqui confiamos na ordem dos números encontrados na linha de texto
-                    for i, col in enumerate(colunas_numericas):
+                    # Mapeia valores encontrados para as colunas detectadas no cabeçalho
+                    # Se não detectou cabeçalho nesta página, usa o padrão das colunas numéricas
+                    mapping_final = current_mapping if current_mapping else colunas_numericas
+                    
+                    for i, col in enumerate(mapping_final):
                         if i < len(valores_encontrados):
-                            linha_padronizada[col] = formatar_valor(valores_encontrados[i])
-                        else:
-                            linha_padronizada[col] = "0"
+                            registro[col] = formatar_valor(valores_encontrados[i])
                             
-                    dados.append(linha_padronizada)
-                else:
-                    # Se não conseguiu separar documento, log para debug (opcional)
-                    # print(f"DEBUG: Falha ao extrair documento da linha: {line}")
-                    pass
+                    dados.append(registro)
 
     # Cria DataFrame final
     df = pd.DataFrame(dados, columns=colunas_padrao)
     
-    # Garante formatação zerada para colunas vazias
+    # Normalização final (garante "0" em vez de nulos ou vazios nas numéricas)
     for col in colunas_numericas:
         if col in df.columns:
-            df[col] = df[col].replace("", "0")
+            df[col] = df[col].fillna("0").replace("", "0")
             
-    print(f"DEBUG: Total de registros extraídos: {len(df)}")
+    print(f"DEBUG: Total de registros extraídos (Latam): {len(df)}")
     return df
 
 def criar_interface():
